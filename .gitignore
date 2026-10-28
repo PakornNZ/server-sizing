@@ -1,5 +1,6 @@
 .env
 **/.env
+!Frontend/.env
 **/.next/
 **/node_modules/
 **/*.tsbuildinfo

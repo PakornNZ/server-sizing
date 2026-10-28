@@ -1,0 +1,8 @@
+.env
+**/.env
+**/.next/
+**/node_modules/
+**/*.tsbuildinfo
+**/*.bak
+Frontend/prisma/*.db
+Frontend/prisma/data/

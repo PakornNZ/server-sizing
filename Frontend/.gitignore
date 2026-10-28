@@ -1,0 +1,9 @@
+.env
+data/*
+!data/model_dashboard.sqlite
+.next/
+node_modules/
+*.tsbuildinfo
+*.bak
+prisma/*.db
+prisma/data/

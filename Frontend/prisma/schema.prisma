@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model LlmModel {
+  id            Int      @id @default(autoincrement())
+  rank          Int?
+  model         String
+  modelType     String   @default("llm")
+  provider      String
+  contextTokens Int?
+  parametersB   Float
+  modelId       String?
+  revision      String?
+  totalParameters Float?
+  activeParameters Float?
+  architecture  String?
+  numHiddenLayers Int?
+  numAttentionHeads Int?
+  numKeyValueHeads Int?
+  headDim       Int?
+  hiddenSize    Int?
+  maxContextTokens Int?
+  weightFormat  String?
+  weightBits    Float?
+  kvCacheBits   Int?
+  residentWeightBytes Float?
+  residentWeightEngine String?
+  residentWeightEngineVersion String?
+  residentWeightSource String?
+  metadataSource String?
+  verifiedAt    String?
+  intelligence  Float?
+  coding        Float?
+  agentic       Float?
+  gpqa          Float?
+  hle           Float?
+  lcr           Float?
+  hfDownloads   Int?
+  hfLikes       Int?
+  hfUrl         String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Gpu {
+  id        String   @id
+  vendor    String
+  name      String
+  className String
+  vramGb    Float
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DgxProfile {
+  id               Int           @id @default(autoincrement())
+  stackCount       Int           @unique
+  label            String
+  unifiedMemoryGb  Float
+  usableAiMemoryGb Float
+  maxModelB        Float
+  interconnect     String?
+  isActive         Boolean       @default(true)
+  capacities       DgxCapacity[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model DgxCapacity {
+  id                  Int        @id @default(autoincrement())
+  profileId           Int
+  modelBucketB        Float
+  useCase             String
+  supportedConcurrent Int
+  isActive            Boolean    @default(true)
+  profile             DgxProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+}
+
+model ServerApp {
+  id        Int      @id @default(autoincrement())
+  name      String
+  category  String?
+  iconName  String?
+  iconBackground String @default("auto")
+  networkGbps Float?
+  cpuCores  Float
+  ramGb     Float
+  storageGb Float
+  note      String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model LlmPickModelHistory {
+  id                    Int       @id @default(autoincrement())
+  calculationVersion    Int?
+  calculationSnapshot   String?
+  name                  String
+  modelId               Int?
+  modelName             String
+  modelProvider         String
+  modelParametersB      Float
+  useCase               String
+  contextTokens         Int
+  quant                 String
+  concurrent            Int
+  hardwareType          String
+  gpuId                 String?
+  gpuName               String?
+  gpuCount              Int?
+  systemRamGb           Float?
+  stackCount            Int?
+  weightGb              Float?
+  kvGb                  Float?
+  requiredGpuVramGb     Float?
+  availableGpuVramGb    Float?
+  requiredSystemRamGb   Float?
+  supportedConcurrent   Int?
+  status                String
+  recommendationText    String
+  createdAt             DateTime  @default(now())
+  deletedAt             DateTime?
+}
+
+model LlmServerHistory {
+  id                  Int                            @id @default(autoincrement())
+  calculationVersion  Int?
+  calculationSnapshot String?
+  name                String
+  hardwareType        String
+  useCase             String
+  contextTokens       Int
+  quant               String
+  concurrent          Int
+  gpuId               String?
+  gpuName             String?
+  gpuCount            Int?
+  systemRamGb         Float?
+  stackCount          Int?
+  search              String?
+  provider            String?
+  minParametersB      Float?
+  maxParametersB      Float?
+  matchedCount        Int
+  status              String
+  createdAt           DateTime                       @default(now())
+  deletedAt           DateTime?
+  matchedModels       LlmServerHistoryMatchedModel[]
+}
+
+model LlmServerHistoryMatchedModel {
+  id             Int              @id @default(autoincrement())
+  historyId      Int
+  modelId        Int?
+  modelName      String
+  provider       String
+  parametersB    Float
+  rank           Int?
+  intelligence   Float?
+  status         String
+  history        LlmServerHistory @relation(fields: [historyId], references: [id], onDelete: Cascade)
+}
+
+model AppSizerHistory {
+  id                   Int                    @id @default(autoincrement())
+  name                 String
+  growMode             String
+  growPercent          Float
+  cpuGrowPercent       Float?
+  ramGrowPercent       Float?
+  storageGrowPercent   Float?
+  networkGrowPercent   Float?
+  appCount             Int
+  baseCpu              Float
+  baseRamGb            Float
+  baseStorageGb        Float
+  baseNetworkGbps      Float?
+  recommendedCpu       Float
+  recommendedRamGb     Float
+  recommendedStorageGb Float
+  recommendedNetworkGbps Float?
+  status               String
+  recommendationText   String
+  createdAt            DateTime               @default(now())
+  deletedAt            DateTime?
+  items                AppSizerHistoryItem[]
+}
+
+model AppSizerHistoryItem {
+  id             Int             @id @default(autoincrement())
+  historyId      Int
+  appId          Int?
+  name           String
+  category       String?
+  cpuCores       Float
+  ramGb          Float
+  storageGb      Float
+  history        AppSizerHistory @relation(fields: [historyId], references: [id], onDelete: Cascade)
+}

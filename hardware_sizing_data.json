@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "notes": [
+    "DGX Spark is a special unified-memory profile and must not use the standard GPU VRAM + system RAM calculator.",
+    "Standard GPU estimates are overview-level recommendations for model selection, not a replacement for production benchmarking.",
+    "GPU catalog VRAM values are fixed UI selection data so users can choose GPU model + quantity instead of typing VRAM manually."
+  ],
+  "sources": [
+    {
+      "name": "NVIDIA DGX Spark specifications",
+      "url": "https://www.nvidia.com/en-us/products/workstations/dgx-spark/"
+    },
+    {
+      "name": "Hugging Face LLM optimization guide",
+      "url": "https://huggingface.co/docs/transformers/main/en/llm_tutorial_optimization"
+    },
+    {
+      "name": "NVIDIA H100 specifications",
+      "url": "https://www.nvidia.com/en-us/data-center/h100/"
+    },
+    {
+      "name": "NVIDIA L40S specifications",
+      "url": "https://www.nvidia.com/en-us/data-center/l40s/"
+    }
+  ],
+  "standardGpuCalculator": {
+    "type": "standard_gpu",
+    "inputs": ["useCase", "modelB", "quant", "concurrent", "gpuId", "gpuCount", "systemRamGb"],
+    "quantFactorsGbPerBillionParams": {
+      "fp16": 2,
+      "q8": 1,
+      "q4": 0.5
+    },
+    "defaults": {
+      "quant": "q4",
+      "modelOverheadFactor": 1.15,
+      "runtimeOverheadGb": 4,
+      "gpuUtilization": 0.85,
+      "systemRamHeadroomGb": 16,
+      "kvFactor": 0.12
+    },
+    "useCasePresets": {
+      "chat": { "label": "Chat", "contextTokens": 4000 },
+      "agent": { "label": "Agent", "contextTokens": 8000 },
+      "rag": { "label": "RAG / Docs", "contextTokens": 16000 },
+      "long_context": { "label": "Long Context", "contextTokens": 32000 }
+    },
+    "formulas": {
+      "totalGpuVramGb": "gpu.vramGb * gpuCount",
+      "weightGb": "modelB * quantFactor * modelOverheadFactor",
+      "kvGb": "modelB * concurrent * contextTokens / 100000 * kvFactor",
+      "requiredGpuVramGb": "(weightGb + kvGb + runtimeOverheadGb) / gpuUtilization",
+      "requiredSystemRamGb": "weightGb + systemRamHeadroomGb",
+      "fitsGpu": "requiredGpuVramGb <= totalGpuVramGb",
+      "fitsSystemRam": "requiredSystemRamGb <= systemRamGb"
+    },
+    "recommendationRules": [
+      "If GPU VRAM is short, reduce model size, reduce concurrent, reduce use-case intensity, use stronger quantization, or add GPUs.",
+      "If system RAM is short, add RAM in 16GB or 32GB steps.",
+      "For long-context workloads, prefer more VRAM before more system RAM.",
+      "For multi-GPU standard servers, this overview treats VRAM as additive only when the serving stack supports model parallelism."
+    ]
+  },
+  "dgxSparkCalculator": {
+    "type": "dgx_spark",
+    "inputs": ["useCase", "modelB", "quant", "concurrent", "stackCount"],
+    "fixedAssumptions": {
+      "headroom": "15%",
+      "stackingNote": "Stacking improves model capacity more than it improves interactive latency/concurrency."
+    },
+    "profiles": {
+      "1": {
+        "label": "1x DGX Spark",
+        "unifiedMemoryGb": 128,
+        "usableAiMemoryGb": 100,
+        "maxModelB": 200,
+        "interconnect": null
+      },
+      "2": {
+        "label": "2x DGX Spark",
+        "unifiedMemoryGb": 256,
+        "usableAiMemoryGb": 200,
+        "maxModelB": 405,
+        "interconnect": "ConnectX 200Gbps"
+      }
+    },
+    "modelBucketsB": [20, 32, 70, 120, 200, 405],
+    "capacityMatrix": {
+      "1": {
+        "20": { "chat": 32, "agent": 24, "rag": 16, "long_context": 8 },
+        "32": { "chat": 24, "agent": 16, "rag": 10, "long_context": 5 },
+        "70": { "chat": 12, "agent": 8, "rag": 4, "long_context": 2 },
+        "120": { "chat": 8, "agent": 6, "rag": 3, "long_context": 1 },
+        "200": { "chat": 4, "agent": 2, "rag": 1, "long_context": 0 }
+      },
+      "2": {
+        "20": { "chat": 64, "agent": 48, "rag": 32, "long_context": 16 },
+        "32": { "chat": 48, "agent": 32, "rag": 20, "long_context": 10 },
+        "70": { "chat": 24, "agent": 16, "rag": 8, "long_context": 4 },
+        "120": { "chat": 16, "agent": 12, "rag": 6, "long_context": 2 },
+        "200": { "chat": 8, "agent": 4, "rag": 2, "long_context": 1 },
+        "405": { "chat": 2, "agent": 1, "rag": 0, "long_context": 0 }
+      }
+    },
+    "statusRules": {
+      "not_supported": "modelB > profile.maxModelB",
+      "recommended": "concurrent <= supportedConcurrent",
+      "borderline": "concurrent <= supportedConcurrent * 1.35",
+      "not_recommended": "concurrent > supportedConcurrent * 1.35"
+    },
+    "upgradeRules": [
+      "Increase stack count from 1x to 2x DGX Spark.",
+      "Use a smaller model bucket, for example 120B to 70B.",
+      "Reduce workload intensity, for example RAG to Agent or Agent to Chat.",
+      "Reduce concurrent users."
+    ]
+  },
+  "gpuCatalog": [
+    { "id": "rtx_4060_ti_16gb", "vendor": "NVIDIA", "name": "GeForce RTX 4060 Ti 16GB", "class": "consumer", "vramGb": 16 },
+    { "id": "rtx_4070_ti_super", "vendor": "NVIDIA", "name": "GeForce RTX 4070 Ti SUPER", "class": "consumer", "vramGb": 16 },
+    { "id": "rtx_4080_super", "vendor": "NVIDIA", "name": "GeForce RTX 4080 SUPER", "class": "consumer", "vramGb": 16 },
+    { "id": "rtx_4090", "vendor": "NVIDIA", "name": "GeForce RTX 4090", "class": "consumer", "vramGb": 24 },
+    { "id": "rtx_5070_ti", "vendor": "NVIDIA", "name": "GeForce RTX 5070 Ti", "class": "consumer", "vramGb": 16 },
+    { "id": "rtx_5080", "vendor": "NVIDIA", "name": "GeForce RTX 5080", "class": "consumer", "vramGb": 16 },
+    { "id": "rtx_5090", "vendor": "NVIDIA", "name": "GeForce RTX 5090", "class": "consumer", "vramGb": 32 },
+    { "id": "rtx_a4000", "vendor": "NVIDIA", "name": "RTX A4000", "class": "workstation", "vramGb": 16 },
+    { "id": "rtx_a4500", "vendor": "NVIDIA", "name": "RTX A4500", "class": "workstation", "vramGb": 20 },
+    { "id": "rtx_a5000", "vendor": "NVIDIA", "name": "RTX A5000", "class": "workstation", "vramGb": 24 },
+    { "id": "rtx_a6000", "vendor": "NVIDIA", "name": "RTX A6000", "class": "workstation", "vramGb": 48 },
+    { "id": "rtx_4000_ada", "vendor": "NVIDIA", "name": "RTX 4000 Ada", "class": "workstation", "vramGb": 20 },
+    { "id": "rtx_4500_ada", "vendor": "NVIDIA", "name": "RTX 4500 Ada", "class": "workstation", "vramGb": 24 },
+    { "id": "rtx_5000_ada", "vendor": "NVIDIA", "name": "RTX 5000 Ada", "class": "workstation", "vramGb": 32 },
+    { "id": "rtx_6000_ada", "vendor": "NVIDIA", "name": "RTX 6000 Ada", "class": "workstation", "vramGb": 48 },
+    { "id": "rtx_pro_6000_blackwell", "vendor": "NVIDIA", "name": "RTX PRO 6000 Blackwell", "class": "workstation", "vramGb": 96 },
+    { "id": "l4", "vendor": "NVIDIA", "name": "L4", "class": "datacenter", "vramGb": 24 },
+    { "id": "l40s", "vendor": "NVIDIA", "name": "L40S", "class": "datacenter", "vramGb": 48 },
+    { "id": "a10", "vendor": "NVIDIA", "name": "A10", "class": "datacenter", "vramGb": 24 },
+    { "id": "a40", "vendor": "NVIDIA", "name": "A40", "class": "datacenter", "vramGb": 48 },
+    { "id": "a100_40gb", "vendor": "NVIDIA", "name": "A100 40GB", "class": "datacenter", "vramGb": 40 },
+    { "id": "a100_80gb", "vendor": "NVIDIA", "name": "A100 80GB", "class": "datacenter", "vramGb": 80 },
+    { "id": "h100_pcie", "vendor": "NVIDIA", "name": "H100 PCIe", "class": "datacenter", "vramGb": 80 },
+    { "id": "h100_sxm", "vendor": "NVIDIA", "name": "H100 SXM", "class": "datacenter", "vramGb": 80 },
+    { "id": "h100_nvl", "vendor": "NVIDIA", "name": "H100 NVL", "class": "datacenter", "vramGb": 94 },
+    { "id": "h200", "vendor": "NVIDIA", "name": "H200", "class": "datacenter", "vramGb": 141 },
+    { "id": "b200", "vendor": "NVIDIA", "name": "B200", "class": "datacenter", "vramGb": 180 },
+    { "id": "mi300x", "vendor": "AMD", "name": "Instinct MI300X", "class": "datacenter", "vramGb": 192 },
+    { "id": "mi325x", "vendor": "AMD", "name": "Instinct MI325X", "class": "datacenter", "vramGb": 256 },
+    { "id": "arc_pro_b60", "vendor": "Intel", "name": "Arc Pro B60", "class": "workstation", "vramGb": 24 }
+  ]
+}

@@ -11,7 +11,7 @@ npm run db:generate
 npm run dev
 ```
 
-The repository includes `data/model_dashboard.sqlite` with the current catalog. Set new admin credentials and a random `AUTH_SECRET` in `.env` before starting the application.
+The repository includes `data/model_dashboard.sqlite` with the current catalog. The application is available at `http://localhost:3000` without a sign-in step.
 
 ## Validation
 
@@ -34,10 +34,9 @@ Set `PLAYWRIGHT_CHANNEL` to another installed Playwright browser channel when ne
 
 ```bash
 npm run metadata:refresh
-npm run metadata:queue
 ```
 
-`metadata:refresh` updates supported topology from pinned Hugging Face configurations. `metadata:queue` regenerates the unresolved metadata report in the project root.
+`metadata:refresh` updates supported topology from pinned Hugging Face configurations.
 
 ## Docker
 
@@ -47,4 +46,4 @@ The Compose service mounts the committed database directory at `/app/data`.
 docker compose up -d --build
 ```
 
-The external Docker network `proxy` must already exist.
+Docker publishes the application only on `127.0.0.1:3000`.

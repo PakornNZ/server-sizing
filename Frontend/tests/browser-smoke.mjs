@@ -22,7 +22,7 @@ legacy.close()
 const base = "http://127.0.0.1:3007"
 const server = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3007"], {
     cwd: root,
-    env: { ...process.env, DATABASE_URL: `file:${database.replaceAll("\\", "/")}`, AUTH_URL: base, NEXTAUTH_URL: base, AUTH_TRUST_HOST: "true", AUTH_SECRET: "isolated-smoke-test-secret-not-for-production", ADMIN_USERNAME: "smoke", ADMIN_PASSWORD: "isolated-test-password" },
+    env: { ...process.env, DATABASE_URL: `file:${database.replaceAll("\\", "/")}` },
     stdio: ["ignore", "pipe", "pipe"],
 })
 let output = "", browser
@@ -33,7 +33,7 @@ try {
     for (let i = 0; i < 60; i++) {
         if (server.exitCode !== null) throw new Error(`Server exited: ${output}`)
         // Never send test writes to an unrelated server already occupying this port.
-        try { ready = output.includes("Ready") && (await fetch(`${base}/api/auth/csrf`)).ok } catch { /* Wait for local startup. */ }
+        try { ready = output.includes("Ready") && (await fetch(`${base}/api/catalog`)).ok } catch { /* Wait for local startup. */ }
         if (ready) break
         await delay(500)
     }
@@ -43,9 +43,6 @@ try {
     const page = await context.newPage()
     const errors = []
     page.on("pageerror", (error) => errors.push(error.message))
-    const csrf = await (await context.request.get(`${base}/api/auth/csrf`)).json()
-    await context.request.post(`${base}/api/auth/callback/credentials`, { form: { csrfToken: csrf.csrfToken, username: "smoke", password: "isolated-test-password", callbackUrl: base } })
-
     const fixture = { model: "Synthetic GQA fixture", modelType: "llm", provider: "Test only", parametersB: 70, totalParameters: 70_000_000_000, modelId: "synthetic", revision: "test-only", architecture: "decoder_gqa", numHiddenLayers: 80, numAttentionHeads: 64, numKeyValueHeads: 8, headDim: 128, maxContextTokens: 32000, metadataSource: "https://example.com/synthetic-fixture", verifiedAt: "2026-09-06" }
     const created = await context.request.post(`${base}/api/admin/models`, { data: fixture })
     assert.equal(created.status(), 200)

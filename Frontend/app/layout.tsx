@@ -3,7 +3,6 @@ import { Google_Sans } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import "./style/dashboard.css";
-import Providers from "./providers";
 import ThemeInitializer from "./components/ThemeInitializer";
 
 type ThemeMode = "system" | "light" | "dark";
@@ -43,9 +42,7 @@ export default async function RootLayout({
     >
       <body className={`${googleSans.variable} antialiased`} suppressHydrationWarning>
         <ThemeInitializer />
-        <Providers>
-          {children}
-        </Providers>
+        {children}
       </body>
     </html>
   );

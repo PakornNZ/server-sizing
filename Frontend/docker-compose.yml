@@ -2,18 +2,10 @@ services:
   server_frontend:
     build: .
     container_name: server_frontend
-    env_file:
-      - .env
     environment:
       DATABASE_URL: file:/app/data/model_dashboard.sqlite
-    expose:
-      - "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
     volumes:
       - ./data:/app/data
-    networks:
-      - proxy
     restart: unless-stopped
-
-networks:
-  proxy:
-    external: true
